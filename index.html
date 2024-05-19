@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Camera Stream</title>
+</head>
+<body>
+    <h1>Live Camera Stream</h1>
+    <video id="video" autoplay playsinline></video>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const video = document.getElementById('video');
+
+        // Access the camera and stream video
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then((stream) => {
+                video.srcObject = stream;
+                video.play();
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+
+                const sendFrame = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL('image/webp');
+                    socket.emit('stream', dataUrl);
+                    requestAnimationFrame(sendFrame);
+                };
+
+                sendFrame();
+            })
+            .catch((err) => {
+                console.error('Error accessing the camera', err);
+            });
+
+        socket.on('stream', (image) => {
+            const img = new Image();
+            img.src = image;
+            document.body.appendChild(img);
+        });
+    </script>
+</body>
+</html>
